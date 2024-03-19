@@ -1,7 +1,5 @@
-Create conda env
-Install packages
+Create conda env with all required packages (+ compatible versions)
 
-Create nbdev repo
 Create notebooks
 Compile from notebooks
 
