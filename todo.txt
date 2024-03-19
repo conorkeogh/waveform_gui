@@ -1,0 +1,12 @@
+Create conda env
+Install packages
+
+Create nbdev repo
+Create notebooks
+Compile from notebooks
+
+Create command line tool to run
+Add requirements - needs either old dearpygui OR update to new syntax
+Create installable package
+
+Document
