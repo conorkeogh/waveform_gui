@@ -1,0 +1,9 @@
+project:
+  output-dir: _docs
+
+website:
+  title: "waveform_gui"
+  site-url: "https://conorkeogh.github.io/waveform_gui"
+  description: "Repository for graphical interface for running waveform experiment"
+  repo-branch: main
+  repo-url: "https://github.com/conorkeogh/waveform_gui"
