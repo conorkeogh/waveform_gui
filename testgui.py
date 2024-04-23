@@ -31,8 +31,10 @@ from dearpygui.core import *
 from dearpygui.simple import *
 
 # Import WaveWriter library
+import wavewriter
 
 ''' Declare WaveWriter object '''
+device = wavewriter.WaveWriter()
 
 ''' Define waveforms '''
 NUM_WAVEFORMS = 8
@@ -135,6 +137,7 @@ def connect_callback(sender, data):
     Enables start button
     '''
     # Connect to device
+    device.connect()
     interface.connected = True
 
     # Enable demographic inputs
@@ -206,7 +209,8 @@ def startSession_callback(sender, data):
     # Enable running experiment
     configure_item("Amplitude (mA)##input", enabled=True)
     configure_item("Duration (s)##input", enabled=True)
-    configure_item("Stimulate", enabled=True, callback=stimulate_callback)
+    configure_item("Send", enabled=True, callback=send_waveform_callback)
+    configure_item("Stimulate", enabled=False)
 
     configure_item("Perception##input", enabled=True)
     configure_item("Sensory##input", enabled=True)
@@ -259,6 +263,7 @@ def endSession_callback(sender, data):
 
     configure_item("Amplitude (mA)##input", enabled=False)
     configure_item("Duration (s)##input", enabled=False)
+    configure_item("Send", enabled=False)
     configure_item("Stimulate", enabled=False)
 
     configure_item("Perception##input", enabled=False)
@@ -277,21 +282,122 @@ def endSession_callback(sender, data):
     set_value("##OverallStatus", "Ready to connect")
 
 # Stimulate callback
-def stimulate_callback(sender, data):
+def send_waveform_callback(sender, data):
     '''
     Get data from amplitude and duration fields
     Run stimulation
     '''
     # Get amplitude
-
-    # Get duration
+    amplitude = get_value("Amplitude (mA)##input")
 
     # Send waveform
         # Use waveforms[waveform_id] to determine which waveform to generate
         # e.g. switch/case using this to determine which function to run
+    current_waveform = interface.waveforms[interface.waveform_id]
+    
+    if interface.waveform_titles[current_waveform] == 'Tonic':
+        v, t = wavewriter.generate_tonic(
+            amplitude, # mA
+            40, # Hz
+            100, # us
+            biphasic = True
+        )
+        
+    elif interface.waveform_titles[current_waveform] == 'Nevro HF':
+        v, t = wavewriter.generate_tonic(
+            amplitude, # mA
+            10000, # Hz
+            30, # us
+            biphasic = True
+        )
+        
+    elif interface.waveform_titles[current_waveform] == 'Boston Burst':
+        v, t = wavewriter.generate_burst_boston(
+            amplitude, # mA
+            5, # Pulses per burst
+            500, # Hz intraburst
+            40, # Hz interburst
+            1000 # us pulsewidth
+        )
+        
+    elif interface.waveform_titles[current_waveform] == 'Abbott Burst':
+        v, t = wavewriter.generate_burst_abbott(
+            amplitude, # mA
+            500, # Hz intraburst
+            40, # Hz interburst
+            1000, # us pulsewidth
+        )
+        
+    elif interface.waveform_titles[current_waveform] == 'Sinusoidal':
+        v, t = wavewriter.generate_sine(
+            amplitude, # mA
+            2000, # Hz
+            1 # Cycles
+        )
+        
+    elif interface.waveform_titles[current_waveform] == 'Russian':
+        v, t = wavewriter.generate_russian(
+            amplitude, # mA
+            2000, # Hz
+            40, # Hz (modulating)
+            10000 # us window length
+        )
+        
+    elif interface.waveform_titles[current_waveform] == 'Wavelet':
+        v, t = wavewriter.generate_wavelet(
+            amplitude, # mA
+            2000, # Hz
+            40, # Hz modulating
+            4000 # Standard deviation
+        )
+        
+    elif interface.waveform_titles[current_waveform] == 'Offset wavelet':
+        v, t = wavewriter.generate_wavelet_modulated(
+            amplitude, # mA
+            2000, # Hz
+            40, # Hz modulating
+            4000, # Standard deviation
+        )
 
+    
+    # Deactivate stimulate button (if active)
+    configure_item("Stimulate", enabled=False)
+    configure_item("Send", enabled=False)
+    configure_item("End session", enabled=False)
+    configure_item("Next waveform", enabled=False)
+    
+    # Send waveform
+    v, t = wavewriter.convert_waveform(v, t)
+    device.send_waveform(v)
+    
+    # Activate stimulate button
+    configure_item("Stimulate", enabled=True)
+    configure_item("Send", enabled=True)
+    configure_item("End session", enabled=True)
+    configure_item("Next waveform", enabled=True)
+    
+# Run stimulation callback
+def stimulate_callback(sender, data):
+    # Get duration
+    dur = get_value("Duration (s)##input")
+    
+    # Deactivate buttons
+    configure_item("Stimulate", enabled=False)
+    configure_item("Send", enabled=False)
+    configure_item("End session", enabled=False)
+    configure_item("Next waveform", enabled=False)
+    
     # Run stimulation
+    device.start()
+    time.sleep(dur)
+    device.stop()
 
+    # Reactivate buttons
+    configure_item("Stimulate", enabled=True)
+    configure_item("Send", enabled=True)
+    configure_item("End session", enabled=True)
+    configure_item("Next waveform", enabled=True)
+    
 # Next waveform callback
 def nextWaveform_callback(sender, data):
     '''
@@ -315,6 +421,7 @@ def nextWaveform_callback(sender, data):
         # Disable inputs
         configure_item("Amplitude (mA)##input", enabled=False)
         configure_item("Duration (s)##input", enabled=False)
+        configure_item("Send", enabled=False)
         configure_item("Stimulate", enabled=False)
 
         configure_item("Perception##input", enabled=False)
@@ -331,6 +438,8 @@ def nextWaveform_callback(sender, data):
     else:
         # Update display
         set_value("##WaveformStatus", f"{interface.waveform_id+1}")
+        configure_item("Send", enabled=True)
+        configure_item("Stimulate", enabled=False)
 
 ''' Define window layout '''
 
@@ -420,7 +529,9 @@ with window("ONI"):
         # Add button: stimulate
         add_spacing(count=3)
 #        add_text("")
-#        add_same_line()
+        add_button("Send", enabled=False,
+                  callback=send_waveform_callback)
+        add_same_line()
         add_button("Stimulate", enabled=False,
                    callback=stimulate_callback)
 
