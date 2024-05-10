@@ -72,6 +72,11 @@ class Interface:
         self.thresholds_motor = np.zeros(NUM_WAVEFORMS)
         self.thresholds_discomfort = np.zeros(NUM_WAVEFORMS)
         self.thresholds_pain = np.zeros(NUM_WAVEFORMS)
+        
+        self.pain_scores = np.zeros(NUM_WAVEFORMS)
+        self.electrode_pain = np.zeros(NUM_WAVEFORMS)
+        self.paraesthesia_pain = np.zeros(NUM_WAVEFORMS)
+        self.motor_pain = np.zeros(NUM_WAVEFORMS)
 
     # Parse inputs
     def parseInputs(self):
@@ -218,6 +223,11 @@ def startSession_callback(sender, data):
     configure_item("Discomfort##input", enabled=True)
     configure_item("Pain##input", enabled=True)
     
+    configure_item("Pain rating##input", enabled=True)
+    configure_item("Electrode pain##input", enabled=True)
+    configure_item("Paraesthesia pain##input", enabled=True)
+    configure_item("Motor pain##input", enabled=True)
+
     configure_item("Next waveform", enabled=True,
                    callback=nextWaveform_callback)
 
@@ -239,11 +249,11 @@ def endSession_callback(sender, data):
     # Write header to file
     with open(interface.filename, 'w') as file:
         # Write header to file
-        file.write("Waveform, Perception, Sensory, Motor, Discomfort, Pain\n")
+        file.write("Waveform, Perception, Sensory, Motor, Discomfort, Pain, Pain Score, Electrode Pain, Paraesthesia Pain, Motor Pain\n")
 
         # Write data to file
         for idx in range(NUM_WAVEFORMS):
-            file.write(f"{interface.waveform_titles[idx]}, {interface.thresholds_perception[idx]}, {interface.thresholds_sensory[idx]}, {interface.thresholds_motor[idx]}, {interface.thresholds_discomfort[idx]}, {interface.thresholds_pain[idx]}\n")
+            file.write(f"{interface.waveform_titles[idx]}, {interface.thresholds_perception[idx]}, {interface.thresholds_sensory[idx]}, {interface.thresholds_motor[idx]}, {interface.thresholds_discomfort[idx]}, {interface.thresholds_pain[idx]}, {interface.pain_scores[idx]}, {interface.electrode_pain[idx]}, {interface.paraesthesia_pain[idx]}, {interface.motor_pain[idx]}\n")
 
         file.close()
 
@@ -272,6 +282,11 @@ def endSession_callback(sender, data):
     configure_item("Discomfort##input", enabled=False)
     configure_item("Pain##input", enabled=False)
     
+    configure_item("Pain rating##input", enabled=False)
+    configure_item("Electrode pain##input", enabled=False)
+    configure_item("Paraesthesia pain##input", enabled=False)
+    configure_item("Motor pain##input", enabled=False)
+
     configure_item("Next waveform", enabled=False)
 
     # Update status
@@ -412,6 +427,11 @@ def nextWaveform_callback(sender, data):
     interface.thresholds_motor[interface.waveforms[interface.waveform_id]] = get_value("Motor##input")
     interface.thresholds_discomfort[interface.waveforms[interface.waveform_id]] = get_value("Discomfort##input")
     interface.thresholds_pain[interface.waveforms[interface.waveform_id]] = get_value("Pain##input")
+    
+    interface.pain_scores[interface.waveforms[interface.waveform_id]] = get_value("Pain rating##input")
+    interface.electrode_pain[interface.waveforms[interface.waveform_id]] = get_value("Electrode pain##input")
+    interface.paraesthesia_pain[interface.waveforms[interface.waveform_id]] = get_value("Paraesthesia pain##input")
+    interface.motor_pain[interface.waveforms[interface.waveform_id]] = get_value("Motor pain##input")
 
     # Move to next waveform
     interface.waveform_id += 1
@@ -430,6 +450,11 @@ def nextWaveform_callback(sender, data):
         configure_item("Discomfort##input", enabled=False)
         configure_item("Pain##input", enabled=False)
     
+        configure_item("Pain rating##input", enabled=False)
+        configure_item("Electrode pain##input", enabled=False)
+        configure_item("Paraesthesia pain##input", enabled=False)
+        configure_item("Motor pain##input", enabled=False)
+
         configure_item("Next waveform", enabled=False)
 
         # Update overall status
@@ -554,6 +579,12 @@ with window("ONI"):
         add_input_int("Pain##input", default_value=0, width=100, enabled=False)
 
         # Add button: next
+        add_spacing(count=3)
+        add_input_int("Pain rating##input", default_value=0, width=100, enabled=False)
+        add_input_int("Electrode pain##input", default_value=0, width=100, enabled=False)
+        add_input_int("Paraesthesia pain##input", default_value=0, width=100, enabled=False)
+        add_input_int("Motor pain##input", default_value=0, width=100, enabled=False)
+
         add_spacing(count=3)
         #add_text("")
         #add_same_line(xoffset=25)
