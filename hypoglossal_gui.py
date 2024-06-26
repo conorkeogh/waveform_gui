@@ -19,8 +19,8 @@ from threading import Thread
 
 import os.path
 
-from dearpygui.core import *
-from dearpygui.simple import *
+from dearpygui.dearpygui import *
+create_context()
 
 # Import WaveWriter library
 import wavewriter
@@ -93,9 +93,9 @@ class Interface:
             self.inputCheck = False
             return
 
-        if self.sessionID == 0:
+        if self.sessionID == "Hyomental":
             self.sessionType = 'hyomental'
-        elif self.sessionID == 1:
+        elif self.sessionID == "Tongue":
             self.sessionType = 'tongue'
 
         # Create filepath
@@ -466,135 +466,142 @@ def monitor_serial():
 
 ''' Define window layout '''
 
-with window("ONI"):
+with window(tag="ONI"):
 
     ''' Settings window '''
     # Create child object for settings
-    with child("SettingsWindow", border=True, width=250, autosize_y=True):
+    with child_window(tag="SettingsWindow", parent="ONI", border=True, width=250, autosize_y=True):
         # Add connect button
         add_text("Connect to Device")
-        add_spacing(count=3)
+        add_spacer(height=3)
         add_text("")
-        add_same_line(xoffset=100)
-        add_button("Connect", enabled=True,
+        group(horizontal=True, xoffset=100)
+        add_button(label="Connect", tag="Connect", enabled=True,
                    callback=connect_callback)
-        add_spacing(count=3)
+        add_spacer(height=3)
         add_separator()
 
         # Add title
         add_text("Session Details")
-        add_spacing(count=3)
+        add_spacer(height=3)
 
         # Add input fields
-        add_input_text("Participant##input", 
+        add_input_text(label="Participant##input", tag="Participant##input", 
                        hint="Enter participant ID",
                       width=150, enabled=False)
 
-        add_radio_button("Session ID##input", items=["Hyomental", "Tongue"], enabled=False)
+        add_radio_button(label="Session ID##input", tag="Session ID##input",
+                         items=["Hyomental", "Tongue"],
+                         default_value="Hyomental", enabled=False)
 
-        add_input_int("Age##input", default_value=30, width=100, enabled=False)
+        add_input_int(label="Age##input", tag="Age##input", default_value=30, width=100, enabled=False)
         add_text("Sex:")
-        add_same_line()
-        add_radio_button("Sex##input", items=["Male", "Female"], enabled=False)
+        group(horizontal=True)
+        add_radio_button(label="Sex##input", tag="Sex##input", items=["Male", "Female"], default_value="Male", enabled=False)
 
-        add_spacing(count=3)
+        add_spacer(height=3)
         add_text("")
-        add_same_line(xoffset=25)
-        add_button("Start session", enabled=False,
+        group(horizontal=True, xoffset=25)
+        add_button(label="Start session", tag="Start session", enabled=False,
                    callback=startSession_callback)
-        add_same_line()
-        add_button("End session", enabled=False,
+        group(horizontal=True)
+        add_button(label="End session", tag="End session", enabled=False,
                    callback=endSession_callback)
 
-        add_spacing(count=3)
+        add_spacer(height=3)
         add_separator()
 
         # Add status section
         add_text("Status")
-        add_spacing(count=3)
+        add_spacer(height=3)
 
         # Device status
         add_text("Device:")
-        add_same_line(xoffset=75)
-        add_label_text("##DeviceStatus", default_value="Not connected", color=[255,0,0])
+        group(horizontal=True, xoffset=75)
+        add_text("Not connected", label="##DeviceStatus", tag="##DeviceStatus", color=[255,0,0])
 
         # Session details
         add_text("Session:")
-        add_same_line(xoffset=75)
-        add_label_text("##SessionStatus", default_value="Not started", color=[255,0,0])
+        group(horizontal=True, xoffset=75)
+        add_text("Not started", label="##SessionStatus", tag="##SessionStatus", color=[255,0,0])
 
         # Overall status
-        add_spacing(count=5)
-        add_label_text("##OverallStatus", default_value="Ready to connect")
+        add_spacer(height=5)
+        add_text("Ready to connect", label="##OverallStatus", tag="##OverallStatus")
 
     ''' Sensors window '''
     # Add to same line - i.e. panes arranged horizontally
-    add_same_line()
+    group(horizontal=True)
 
     # Create child object for sensors
-    with child("InputWindow", autosize_x=True, autosize_y=True):
+    with child_window(label="InputWindow", parent="ONI",
+                      before="SettingsWindow", pos=(270,8), autosize_x=True, autosize_y=True, show=True):
         # Add title
         add_text("Waveform:")
-        add_spacing(count=3)
+        add_spacer(height=3)
 
-        add_button("Load", enabled=False,
+        add_button(label="Load", tag="Load", enabled=False,
                   callback=send_waveform_callback)
 
-        add_spacing(count=3)
+        add_spacer(height=3)
         add_separator()
 
         # Add input: duration
-        add_spacing(count=3)
+        add_spacer(height=3)
         add_text("Run stimulation")
-        add_spacing(count=3)
+        add_spacer(height=3)
         add_text("Stimulation:")
-        add_same_line(xoffset=150)
-        add_label_text("##StimulationStatus", default_value="Off", color=[255,0,0])
-        add_spacing(count=3)
+        group(horizontal=True, xoffset=150)
+        add_text("Off", label="##StimulationStatus", tag="##StimulationStatus", color=[255,0,0])
+        add_spacer(height=3)
 
-        add_button("Start", enabled=False, callback=start_stimulation_callback)
-        add_same_line(xoffset=75)
-        add_button("Stop", enabled=False, callback=stop_stimulation_callback)
-        add_spacing(count=3)
+        add_button(label="Start", tag="Start", enabled=False, callback=start_stimulation_callback)
+        group(horizontal=True, xoffset=75)
+        add_button(label="Stop", tag="Stop", enabled=False, callback=stop_stimulation_callback)
+        add_spacer(height=3)
         add_text("Timed stimulation")
-        add_input_int("Duration (s)##input", default_value=5, width=100,
+        add_input_int(label="Duration (s)##input", tag="Duration (s)##input", default_value=5, width=100,
                       enabled=False)
-        add_spacing(count=3)
-        add_button("Stimulate", enabled=False,
+        add_spacer(height=3)
+        add_button(label="Stimulate", tag="Stimulate", enabled=False,
                    callback=stimulate_callback)
-        add_spacing(count=3)
+        add_spacer(height=3)
         add_separator()
 
         # Add baseline section
         add_text("Calibration")
-        add_spacing(count=3)
+        add_spacer(height=3)
 
-        add_input_int("Baseline (mm)##input", default_value=0,
+        add_text("Max amplitude (mA):")
+        group(horizontal=True, xoffset=150)
+        add_text(label="##CurrentAmplitude", tag="##CurrentAmplitude", default_value="Not specified")
+
+        add_spacer(height=3)
+
+        add_input_int(label="Baseline (mm)##input", tag="Baseline (mm)##input", default_value=0,
                       width=100, enabled=False)
-        add_spacing(count=3)
-        add_input_int("Tolerance threshold (mA)##input", default_value=0, width=100,
-                      enabled=False)
-        add_input_int("Measurement (mm)##input", default_value=0, width=100,
-                      enabled=False)
+        add_spacer(height=3)
+        add_input_int(label="Tolerance threshold (mA)##input", tag="Tolerance threshold (mA)##input", default_value=0, width=100, enabled=False)
+        add_input_int(label="Measurement (mm)##input", tag="Measurement (mm)##input", default_value=0, width=100, enabled=False)
 
-        add_spacing(count=3)
-        add_button("Done calibration", enabled=False, callback=done_calibration_callback)
+        add_spacer(height=3)
+        add_button(label="Done calibration", tag="Done calibration", enabled=False, callback=done_calibration_callback)
         # Add separator
-        add_spacing(count=3)
+        add_spacer(height=3)
         add_separator()
 
         # Add data section
         add_text("Data collection")
-        add_spacing(count=3)
+        add_spacer(height=3)
 
-        add_spacing(count=3)
+        add_spacer(height=3)
         add_text("Measurements:")
-        add_same_line(xoffset=150)
-        add_label_text("##NumMeasures", default_value=f"{interface.amplitude_id}")
-        add_input_int("Measure (mm)##input", default_value=0,
+        group(horizontal=True, xoffset=150)
+        add_text(f"{interface.amplitude_id}", label="##NumMeasures", tag="##NumMeasures")
+        add_input_int(label="Measure (mm)##input", tag="Measure (mm)##input", default_value=0,
                       width=100, enabled=False)
-        add_spacing(count=3)
-        add_button("Next", enabled=False,
+        add_spacer(height=3)
+        add_button(label="Next", tag="Next", enabled=False,
                    callback=add_measure_callback)
 
 
@@ -603,12 +610,14 @@ with window("ONI"):
 # Function to start GUI
 def startGUI():
     # Set main window parameters
-    set_main_window_size(1250, 650)
-    set_main_window_pos(20, 20)
-    set_main_window_title("Oxford Neural Interfacing: Waveform Testing")
+    create_viewport(title="Oxford Neural Interfacing: Hypoglossal Testing", width=1250, height=600, x_pos=20, y_pos=20)
 
     # Start main window
-    start_dearpygui(primary_window="ONI")
+    setup_dearpygui()
+    show_viewport()
+    set_primary_window("ONI", True)
+    start_dearpygui()
+    destroy_context()
 
 serialThread = Thread(target=monitor_serial, daemon=True)
 serialThread.start()
