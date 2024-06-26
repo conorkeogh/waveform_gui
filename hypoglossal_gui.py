@@ -46,16 +46,19 @@ class Interface:
         self.calibrated = False
 
         # Number of times to repeat all measures
-        self.num_repeats = 3
+        self.num_repeats = 10
         
         # Multipliers: output = threshold x multiplier
-        self.multiplier_values = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+        self.multiplier_values = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+        self.num_multipliers = len(self.multiplier_values)
         self.multiplier_values = np.tile(self.multiplier_values, self.num_repeats)
         self.amplitude_id = 0
 
         self.NUM_MEASURES = len(self.multiplier_values)
         self.multipliers = np.arange(self.NUM_MEASURES)
-        self.measures = np.zeros(self.NUM_MEASURES)
+
+        self.measures_hyomental = np.zeros(self.NUM_MEASURES)
+        self.measures_tongue = np.zeros(self.NUM_MEASURES)
 
         self.current_amplitude = 50
 
@@ -75,7 +78,7 @@ class Interface:
         '''
         # Get data from inputs
         self.participantID = get_value("Participant##input")
-        self.sessionID = get_value("Session ID##input")
+#        self.sessionID = get_value("Session ID##input")
         self.sex = get_value("Sex##input")
         self.age = get_value("Age##input")
 
@@ -84,22 +87,22 @@ class Interface:
             set_value("##OverallStatus", "Enter participant ID")
             self.inputCheck = False
             return
-        if self.sessionID == '':
-            set_value("##OverallStatus", "Enter session ID")
-            self.inputCheck = False
-            return
+#        if self.sessionID == '':
+#            set_value("##OverallStatus", "Enter session ID")
+#            self.inputCheck = False
+#            return
         if self.age == '':
             set_value("##OverallStatus", "Enter age")
             self.inputCheck = False
             return
 
-        if self.sessionID == "Hyomental":
-            self.sessionType = 'hyomental'
-        elif self.sessionID == "Tongue":
-            self.sessionType = 'tongue'
+#        if self.sessionID == "Hyomental":
+#            self.sessionType = 'hyomental'
+#        elif self.sessionID == "Tongue":
+#            self.sessionType = 'tongue'
 
         # Create filepath
-        self.filename = self.participantID + '_' + self.sessionType + '.csv'
+        self.filename = self.participantID + '_hypoglossal' + '.csv'
 
         # Check if file already exists
         if os.path.exists(self.filename):
@@ -137,7 +140,7 @@ def connect_callback(sender, data):
 
     # Enable demographic inputs
     configure_item("Participant##input", enabled=True)
-    configure_item("Session ID##input", enabled=True)
+#    configure_item("Session ID##input", enabled=True)
     configure_item("Age##input", enabled=True)
     configure_item("Sex##input", enabled=True)
 
@@ -180,13 +183,18 @@ def startSession_callback(sender, data):
     if (interface.inputCheck):
         # Reset waveforms and shuffle
         interface.amplitude_id = 0
-        np.random.shuffle(interface.multipliers)
+
+        interface.multipliers = np.random.permutation(np.arange(0, interface.num_multipliers))
+        for rep in np.arange(1, interface.num_repeats):
+            interface.multipliers = np.concatenate((interface.multipliers,
+                                                    np.random.permutation(np.arange(rep*interface.num_multipliers, (rep*interface.num_multipliers)+interface.num_multipliers))))
+
     else:
         return
 
     # Disable all inputs
     configure_item("Participant##input", enabled=False)
-    configure_item("Session ID##input", enabled=False)
+#    configure_item("Session ID##input", enabled=False)
     configure_item("Age##input", enabled=False)
     configure_item("Sex##input", enabled=False)
 
@@ -217,38 +225,26 @@ def endSession_callback(sender, data):
 
     # Get data
     participant = get_value("Participant##input")
-    session = interface.sessionType
+#    session = interface.sessionType
     age = get_value("Age##input")
     sex = get_value("Sex##input")
 
-    baseline = get_value("Baseline (mm)##input")
     threshold_current = get_value("Tolerance threshold (mA)##input")
-    threshold_measure = get_value("Measurement (mm)##input")
 
     # Save data
     with open(interface.filename, 'w') as file:
         # Write header to file
-        file.write("Participant ID, session ID, age, sex\n")
-        file.write(f"{participant}, {session}, {age}, {sex}\n\n")
-        file.write("Amplitude, multiplier, measure\n")
-        file.write(f"0, 0.0, {baseline}\n")
-        file.write(f"{threshold_current}, 1.0, {threshold_measure}\n")
+        file.write("Participant ID, age, sex\n")
+        file.write(f"{participant}, {age}, {sex}\n\n")
+        file.write(f"Threshold current: {threshold_current}\n")
+        file.write("Amplitude, multiplier, hyomental distance, tongue diameter\n")
 
-        # Write data to file
-#        for idx in range(interface.NUM_MEASURES):
-            #amplitude = int(threshold_current * interface.multiplier_values[interface.multipliers[idx]])
-            #file.write(f"{amplitude}, {interface.multiplier_values[interface.multipliers[idx]]}, {interface.measures[interface.multipliers[idx]]}\n")
-
-#        for idx in interface.multipliers:
-#            amplitude = int(threshold_current * interface.multiplier_values[idx])
-#            multiplier = interface.multiplier_values[idx]
-#            val = interface.measures[idx]
-#            file.write(f"{amplitude}, {multiplier}, {val}\n")
         for idx in range(interface.NUM_MEASURES):
-            val = interface.measures[idx]
+            val_hyomental = interface.measures_hyomental[idx]
+            val_tongue = interface.measures_tongue[idx]
             multiplier = interface.multiplier_values[idx]
             amplitude = int(threshold_current * multiplier)
-            file.write(f"{amplitude}, {multiplier}, {val}\n")
+            file.write(f"{amplitude}, {multiplier}, {val_hyomental}, {val_tongue}\n")
 
         file.close()
 
@@ -267,10 +263,9 @@ def endSession_callback(sender, data):
     configure_item("Stimulate", enabled=False)
 
     configure_item("Start", enabled=False)
-    configure_item("Baseline (mm)##input", enabled=False)
     configure_item("Tolerance threshold (mA)##input", enabled=False)
-    configure_item("Measure (mm)##input", enabled=False)
-    configure_item("Measurement (mm)##input", enabled=False)
+    configure_item("Hyomental distance (mm)##input", enabled=False)
+    configure_item("Tongue diameter (mm)##input", enabled=False)
     configure_item("Next", enabled=False)
     configure_item("Done calibration", enabled=False)
 
@@ -321,10 +316,9 @@ def send_waveform():
     configure_item("End session", enabled=True)
 
     configure_item("Start", enabled=True)
-    configure_item("Baseline (mm)##input", enabled=True)
     configure_item("Tolerance threshold (mA)##input", enabled=True)
-    configure_item("Measure (mm)##input", enabled=True)
-    configure_item("Measurement (mm)##input", enabled=True)
+    configure_item("Hyomental distance (mm)##input", enabled=True)
+    configure_item("Tongue diameter (mm)##input", enabled=True)
     if interface.calibrated:
         configure_item("Next", enabled=True)
 
@@ -391,10 +385,12 @@ def stimulate_callback(sender, data):
 # Add measurement callback
 def add_measure_callback(sender, data):
     # Get data
-    measure = get_value("Measure (mm)##input")
+    measure_hyomental = get_value("Hyomental distance (mm)##input")
+    measure_tongue = get_value("Tongue diameter (mm)##input")
 
     # Save data
-    interface.measures[interface.multipliers[interface.amplitude_id]] = measure
+    interface.measures_hyomental[interface.multipliers[interface.amplitude_id]] = measure_hyomental
+    interface.measures_tongue[interface.multipliers[interface.amplitude_id]] = measure_tongue
 
     # Reset values
     interface.amplitude_id += 1
@@ -418,10 +414,9 @@ def add_measure_callback(sender, data):
         configure_item("Stimulate", enabled=False)
 
         configure_item("Start", enabled=False)
-        configure_item("Baseline (mm)##input", enabled=False)
         configure_item("Tolerance threshold (mA)##input", enabled=False)
-        configure_item("Measure (mm)##input", enabled=False)
-        configure_item("Measurement (mm)##input", enabled=False)
+        configure_item("Hyomental distance (mm)##input", enabled=False)
+        configure_item("Tongue diameter (mm)##input", enabled=False)
         configure_item("Next", enabled=False)
         
         # Update overall status
@@ -490,9 +485,9 @@ with window(tag="ONI"):
                        hint="Enter participant ID",
                       width=150, enabled=False)
 
-        add_radio_button(label="Session ID##input", tag="Session ID##input",
-                         items=["Hyomental", "Tongue"],
-                         default_value="Hyomental", enabled=False)
+#        add_radio_button(label="Session ID##input", tag="Session ID##input",
+#                         items=["Hyomental", "Tongue"],
+#                         default_value="Hyomental", enabled=False)
 
         add_input_int(label="Age##input", tag="Age##input", default_value=30, width=100, enabled=False)
         add_text("Sex:")
@@ -578,11 +573,7 @@ with window(tag="ONI"):
 
         add_spacer(height=3)
 
-        add_input_int(label="Baseline (mm)##input", tag="Baseline (mm)##input", default_value=0,
-                      width=100, enabled=False)
-        add_spacer(height=3)
         add_input_int(label="Tolerance threshold (mA)##input", tag="Tolerance threshold (mA)##input", default_value=0, width=100, enabled=False)
-        add_input_int(label="Measurement (mm)##input", tag="Measurement (mm)##input", default_value=0, width=100, enabled=False)
 
         add_spacer(height=3)
         add_button(label="Done calibration", tag="Done calibration", enabled=False, callback=done_calibration_callback)
@@ -598,7 +589,9 @@ with window(tag="ONI"):
         add_text("Measurements:")
         group(horizontal=True, xoffset=150)
         add_text(f"{interface.amplitude_id}", label="##NumMeasures", tag="##NumMeasures")
-        add_input_int(label="Measure (mm)##input", tag="Measure (mm)##input", default_value=0,
+        add_input_int(label="Hyomental distance (mm)##input", tag="Hyomental distance (mm)##input", default_value=0,
+                      width=100, enabled=False)
+        add_input_int(label="Tongue diameter (mm)##input", tag="Tongue diameter (mm)##input", default_value=0,
                       width=100, enabled=False)
         add_spacer(height=3)
         add_button(label="Next", tag="Next", enabled=False,
